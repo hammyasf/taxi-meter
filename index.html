@@ -1,0 +1,847 @@
+<!doctype html>
+<html lang="en" data-type="software" data-radius="sharp" data-ground="sage" data-buttons="pill" data-motion>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Taxi Meter: a menu-bar fare meter for AI coding agents</title>
+<meta name="description" content="A free, open-source Mac menu-bar app that shows what Claude Code costs at API list prices: a live fare, every session as a trip with a receipt, a log book and plan value.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Taxi Meter: a menu-bar fare meter for AI coding agents">
+<meta property="og:description" content="A live fare in your Mac menu bar for what Claude Code costs, with trips, receipts and a log book. Free and open source.">
+<meta property="og:image" content="https://taxi-meter.codepost.dev/share.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#121215">
+<link rel="canonical" href="https://taxi-meter.codepost.dev/">
+<meta name="site-kind" content="software">
+<meta name="page-type" content="software">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400..700&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/system.css">
+<link rel="stylesheet" href="assets/ui/cards.css">
+<link rel="stylesheet" href="assets/motion/motion.css">
+<link rel="stylesheet" href="assets/backgrounds/backgrounds.css">
+<link rel="stylesheet" href="assets/layout/layout.css">
+<link rel="stylesheet" href="assets/icons/icon.css">
+<style>
+:root {
+  --p-bg: #121215; --p-surface: #1c1c21; --p-ink: #faf7ed; --p-muted: #878683;
+  --p-accent: #ffcc1a; --p-accent-ink: #121215; --p-action: #ffcc1a; --p-action-ink: #121215;
+  --p-inv-bg: #faf7ed; --p-inv-surface: #e7e5dc; --p-inv-ink: #121215; --p-inv-muted: #5f5f5e;
+  --p-inv-accent: #121215; --p-inv-accent-ink: #faf7ed; --p-inv-action: #121215; --p-inv-action-ink: #faf7ed;
+  --font-display: "Geist", system-ui, sans-serif;
+  --font-text: "Geist", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.035em;
+  --display-tracking-xl: -0.045em;
+}
+
+  /* the tip button: a coin drops into the TIP lamp and the fare rolls to $5.00 on hover, focus or tap */
+  .tip { position: relative; display: flex; align-items: center; gap: 14px; min-height: 64px; padding: 10px 22px 10px 10px; border-radius: 999px;
+         background: #0b0b0b; color: #fff; text-decoration: none; box-shadow: 0 0 0 1px rgb(255 199 13 / .35), 0 18px 36px -18px rgb(0 0 0 / .7);
+         transition: transform .2s cubic-bezier(.22, 1, .36, 1), box-shadow .2s; -webkit-tap-highlight-color: transparent; }
+  .tip:hover { transform: translateY(-2px); box-shadow: 0 0 0 1px #ffc70d, 0 22px 40px -18px rgb(255 199 13 / .35); }
+  .tip:active { transform: translateY(0) scale(.98); }
+  .tip:focus-visible { outline: 2px solid #ffc70d; outline-offset: 3px; }
+  .tip__lamp { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: #ffc70d; color: #000;
+               font: 900 12px/1 ui-rounded, "SF Pro Rounded", var(--font-display); letter-spacing: .12em; text-indent: .12em; }
+  .tip__fare { flex: none; min-width: 5.4ch; padding: 8px 12px; border-radius: 10px; background: #000; color: #ff2414; text-align: right;
+               font: 700 26px/1 var(--font-mono); font-variant-numeric: tabular-nums; text-shadow: 0 0 .35em rgb(255 36 20 / .55); }
+  .tip__label { display: grid; gap: 5px; font: 600 17px/1.1 var(--font-text); white-space: nowrap; }
+  .tip__label small { font: 500 12px/1 var(--font-mono); letter-spacing: .06em; color: rgb(255 255 255 / .62); }
+  .tip__heart { flex: none; width: 22px; height: 22px; margin-left: auto; fill: none; stroke: #ffc70d; stroke-width: 2; transition: fill .2s, stroke .2s, transform .35s cubic-bezier(.34, 1.56, .64, 1); }
+  .tip.is-paid .tip__heart { fill: #ff2414; stroke: #ff2414; transform: scale(1.2); }
+  .tip__coin { position: absolute; left: 22px; top: -28px; width: 20px; height: 20px; border-radius: 50%; opacity: 0; pointer-events: none;
+               background: radial-gradient(circle at 35% 35%, #fff3b0, #ffc70d 55%, #b88700); box-shadow: inset 0 0 0 2px #8a6500; }
+  .tip.is-run .tip__coin { animation: tip-coin .55s cubic-bezier(.5, 0, .75, 0) forwards; }
+  .tip.is-run .tip__lamp { animation: tip-lamp .24s .5s steps(1) 3; }
+  @keyframes tip-coin { 0% { opacity: 0; transform: translateY(-8px) rotateY(0); } 20% { opacity: 1; }
+                        85% { opacity: 1; transform: translateY(36px) rotateY(540deg); } 100% { opacity: 0; transform: translateY(40px) rotateY(540deg) scale(.6); } }
+  @keyframes tip-lamp { 50% { background: #ff2414; color: #fff; } }
+  .closing__cta .tip { margin-top: var(--s-4); }
+  @media (max-width: 440px) { .tip { gap: 10px; padding-right: 16px; } .tip__fare { font-size: 20px; padding: 7px 9px; } .tip__label { font-size: 15px; } }
+  @media (prefers-reduced-motion: reduce) { .tip, .tip__heart { transition: none; } .tip.is-run .tip__coin, .tip.is-run .tip__lamp { animation: none; } }
+
+  /* the email gate: every get-it button opens it; the toy's link comes in the confirmation email (Kit incentive).
+     Works without script too: #gate as the URL's target shows it. */
+  .gate { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); padding: 0; border: 0; border-radius: var(--r-l, 16px);
+          background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line, rgb(127 127 127 / .2)), 0 40px 80px -30px rgb(0 0 0 / .5); }
+  .gate::backdrop { background: rgb(0 0 0 / .55); backdrop-filter: blur(3px); }
+  .gate:target:not([open]) { display: block; position: fixed; inset: 0; margin: auto; height: fit-content; z-index: 100; }
+  .gate__in { display: grid; gap: var(--s-4); padding: var(--s-6) var(--s-5) var(--s-5); }
+  .gate h2 { font-size: var(--t-h3, 1.6rem); line-height: 1.15; padding-right: 40px; }
+  .gate p { color: var(--muted); }
+  .gate .form { grid-template-columns: minmax(0, 1fr); }
+  .gate .btn { width: 100%; justify-content: center; }
+  .gate__x { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%;
+             background: transparent; color: var(--ink); font-size: 22px; line-height: 1; cursor: pointer; text-decoration: none; }
+  .gate__x:hover { background: color-mix(in oklab, var(--ink) 10%, transparent); }
+  .gate__x:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .gate__fine { font-size: var(--t-small); }
+</style>
+<link rel="stylesheet" href="assets/ui/base.css">
+<script>document.documentElement.classList.add('m-enter');setTimeout(()=>document.documentElement.classList.add('m-enter-done'),700)</script>
+<script src="assets/backgrounds/backgrounds.js"></script>
+<script>document.documentElement.classList.add('mo-js');setTimeout(()=>document.documentElement.classList.add('mo-safe'),2500)</script>
+<link rel="modulepreload" href="assets/moments/moments.js">
+<link rel="modulepreload" href="assets/moments/lib.js">
+<link rel="modulepreload" href="assets/moments/counter-rolls/moment.js">
+<!-- page CSS: only what sits inside a visual (the app's own UI, rebuilt as live HTML from TaxiMeter.swift), the app-frame recipe, and one --p-h per card group -->
+<style>
+  /* ---- the app: every size in em of a base that follows the app's own width (1em = 10pt of the 360pt panel) */
+  .ta { --yel: #ffc70d; --red: #ff2414; --amb: #ff850a; --grn: #34c759; --lbl: rgb(255 255 255 / .6); container-type: inline-size; text-align: left; }
+  .ta__in {
+    font: 700 calc(100cqw / 36)/1.2 var(--font-mono); color: #fff; background: #1b1b1b;
+    border-radius: 1.2em; overflow: hidden; box-shadow: 0 0 0 1px rgb(255 255 255 / .08), 0 2.4em 4em -2em rgb(0 0 0 / .6); }
+  .ta p, .ta dl, .ta dd { margin: 0; }
+  .ta__roof { display: grid; place-items: center; height: 3.6em; background: var(--yel); color: #000; }
+  .ta__roof span { font: 900 2em/1 ui-rounded, "SF Pro Rounded", var(--font-display); letter-spacing: .5em; margin-right: -.5em; }
+  .ta__chk { height: 1em; background: repeating-conic-gradient(#000 0 25%, var(--yel) 0 50%) 0 0 / 1em 1em; }
+  .ta__load { height: .2em; background: linear-gradient(90deg, var(--yel) var(--v), transparent 0); }
+  .ta__tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); text-align: center; font-size: .95em; letter-spacing: .1em; color: var(--lbl); border-bottom: 1px solid rgb(255 255 255 / .07); white-space: nowrap; }
+  .ta__tabs span { padding: 1.1em 0 1em; }
+  .ta__tabs .on { color: var(--yel); box-shadow: inset 0 -.22em 0 var(--yel); }
+  .ta__body { display: grid; gap: 1.2em; padding: 1.6em; }
+  .lbl { font-size: .9em; letter-spacing: .13em; color: var(--lbl); white-space: nowrap; }
+  .ta__card { display: grid; gap: .9em; padding: 1.2em; border-radius: .6em; background: rgb(255 255 255 / .045); }
+  .ta__row { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
+  .ta__row > :last-child { text-align: right; }
+  .bar { height: .5em; border-radius: .25em; background: rgb(255 255 255 / .08); }
+  .bar i { display: block; width: var(--v); height: 100%; border-radius: inherit; background: var(--yel); }
+  /* lamps, breathing when lit (For hire, Surge), flickering when they change */
+  .ta__top { display: flex; align-items: center; gap: 1.4em; min-height: 4.4em; }
+  .lamp { display: inline-flex; align-items: center; gap: .6em; font-size: .95em; letter-spacing: .1em; color: rgb(255 255 255 / .52); white-space: nowrap; }
+  .lamp i { width: .95em; height: .95em; border-radius: 50%; background: color-mix(in srgb, var(--c) 16%, transparent); }
+  .lamp.on { color: #fff; }
+  .lamp.on i { background: var(--c); box-shadow: 0 0 .6em var(--c); }
+  .lamp--hire { --c: var(--grn); } .lamp--hired { --c: var(--red); } .lamp--surge { --c: var(--amb); }
+  .lamp.on.lamp--hire i { animation: ta-breathe 2.1s ease-in-out infinite; }
+  .lamp.is-flick i { animation: ta-flick .06s ease-in-out 5 alternate; }
+  @keyframes ta-breathe { 50% { opacity: .62; box-shadow: 0 0 .25em var(--c); } }
+  @keyframes ta-flick { from { opacity: .15; } }
+  /* the hire flag: up when free, swung down about its pivot when the meter runs */
+  .flag { position: relative; flex: none; width: 4.4em; height: 4.4em; margin-left: auto; margin-right: 1.4em; }
+  .flag__arm { position: absolute; left: 50%; bottom: .45em; display: flex; flex-direction: column; align-items: center; transform: translateX(-50%) rotate(0); transform-origin: 50% 100%; transition: transform .45s cubic-bezier(.22, 1, .36, 1); }
+  .flag.is-down .flag__arm { transform: translateX(-50%) rotate(-90deg); }
+  .flag__plate { display: grid; place-items: center; width: 3.2em; height: 2.1em; border-radius: .3em; background: var(--yel); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .35); color: #000; }
+  .flag__plate span { font: 900 .75em/1 ui-rounded, "SF Pro Rounded", var(--font-display); text-align: center; }
+  .flag__pole { width: .4em; height: 1.2em; background: linear-gradient(90deg, #bfbfbf, #666); }
+  .flag__knob { position: absolute; left: 50%; bottom: 0; width: .9em; height: .9em; margin-left: -.45em; border-radius: 50%; background: #8c8c8c; }
+  /* the seven-segment display: ghost 8s under the lit digits; a digit is a drum that rolls */
+  .ta__led { display: flex; align-items: flex-end; gap: 1em; padding: 1.5em 1.3em; border-radius: .6em; background: #000; }
+  .ta__cur { display: grid; gap: .2em; font-size: .9em; letter-spacing: .15em; color: rgb(255 255 255 / .62); }
+  .ta__cur b { font-size: 2.6em; line-height: 1; letter-spacing: 0; }
+  .led { --dh: 6em; --dw: calc(var(--dh) * .645); --lg: .25em; display: flex; align-items: flex-end; gap: var(--lg); margin-left: auto; color: var(--red); filter: drop-shadow(0 0 .3em color-mix(in srgb, currentColor 60%, transparent)); }
+  .dg { position: relative; display: block; width: var(--dw); height: var(--dh); overflow: hidden; }
+  .dg svg { position: absolute; left: 0; top: 0; width: 100%; height: 100%; fill: currentColor; }
+  .dg .gh { fill: color-mix(in srgb, currentColor 13%, transparent); }
+  .dg .drum { position: absolute; inset: 0; will-change: transform; }
+  .dg .drum svg + svg { top: 100%; }
+  .dp { display: block; width: calc(var(--dh) * .095); height: calc(var(--dh) * .095); margin-inline: calc(var(--dh) * -.03) calc(var(--dh) * .02); background: currentColor; }
+  .led--y { --dh: 3.4em; --lg: .2em; margin-left: 0; color: var(--yel); }
+  .ta__led.is-dim .led { opacity: .25; transition: opacity .25s; }
+  /* readouts and the meter tape */
+  .ta__reads { display: flex; justify-content: space-between; gap: 1em; }
+  .ta__reads span { display: grid; gap: .5em; font-size: .9em; letter-spacing: .12em; color: var(--lbl); white-space: nowrap; }
+  .ta__reads b { font-size: 1.5em; letter-spacing: 0; color: var(--yel); }
+  .ta__reads span:last-child { text-align: right; }
+  .tape { display: grid; grid-template-columns: repeat(60, minmax(0, 1fr)); gap: .14em; align-items: end; height: 4.2em; }
+  .tape i { height: var(--v); min-height: .14em; background: var(--yel); opacity: .9; transform-origin: 50% 100%; transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
+  .tape i.z { height: .14em; background: rgb(255 255 255 / .14); opacity: 1; }
+  .tape i:last-child { background: var(--red); }
+  .tape.is-run i:not(.z, .is-in) { transform: scaleY(0); }
+  .ta__foot { display: flex; justify-content: space-between; font-size: .75em; color: var(--lbl); }
+  .ta__foot :last-child { color: #ff5a4a; }
+  /* the menu bar item: the car outline when for hire, filled when hired, and the fare */
+  .mbar { display: flex; justify-content: flex-end; align-items: center; height: 28px; padding: 0 12px; background: rgb(18 18 21 / .92); color: #fff; font: 500 13px/1 var(--font-text); font-variant-numeric: tabular-nums; }
+  .mbar span { display: inline-flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 5px; background: rgb(255 255 255 / .18); white-space: nowrap; }
+  .car { width: 17px; height: 15px; }
+  .car .car__body { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+  .car .car__lamp { fill: currentColor; }
+  .car.is-full .car__body { fill: currentColor; }
+  .car.is-full .car__lamp { fill: #3a3a3e; }
+  /* the thermal receipt, as the app prints it */
+  .rc { width: 330px; padding: 26px 22px 34px; background: #f7f5eb; color: #141414; font: 400 13px/1 var(--font-mono); letter-spacing: .02em;
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 7px repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat;
+    mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / 12px 7px repeat-x, linear-gradient(#000 0 0) top / 100% calc(100% - 7px) no-repeat; }
+  .rc p { margin: 0; text-align: center; }
+  .rc__brand { font: 900 22px/1 ui-rounded, "SF Pro Rounded", var(--font-display); letter-spacing: .3em; margin-right: -.3em; }
+  .rc__chk { display: block; height: 8px; margin: 14px 0 12px; background: repeating-conic-gradient(#141414 0 25%, #ffc70d 0 50%) 0 0 / 16px 16px; }
+  .rc__title { font-size: 12px; font-weight: 700; letter-spacing: .25em; }
+  .rc__rule { display: block; height: 2px; margin: 11px 0; background: repeating-linear-gradient(90deg, rgb(20 20 20 / .5) 0 4px, transparent 4px 7px); }
+  .rc dl { display: grid; gap: 9px; margin: 0; }
+  .rc dl div { display: flex; justify-content: space-between; gap: 12px; }
+  .rc dt, .rc dd { margin: 0; white-space: nowrap; }
+  .rc__total { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; }
+  .rc__total span { font: 800 15px/1 var(--font-mono); }
+  .rc__total b { font: 700 30px/1 var(--font-display); letter-spacing: -.02em; }
+  .rc__total + dl { margin-top: 8px; }
+  .rc__foot { font-size: 10.5px; letter-spacing: .14em; margin-top: 2px; }
+  .rc__thanks { margin-top: 12px !important; font-size: 12.5px; font-weight: 700; letter-spacing: .2em; }
+  /* hero: the lit ground, the menu bar cut by the frame's right edge, the meter under its item, the shift card */
+  .hero__art .mbar { padding-right: calc(var(--ly-cut-room) + 12px); border-radius: 8px 0 0 8px; }
+  .hero__art .ly-piece--main > .ta { max-width: 490px; margin: 10px var(--ly-cut-room) 0 auto; }
+  .hero__art > .ly-piece--note { left: var(--s-6); bottom: var(--s-6); width: 320px; z-index: 2; display: grid; gap: .9em; padding: 1.4em; border-radius: 10px; background: #1b1b1b; color: #fff; font: 700 11px/1.2 var(--font-mono); box-shadow: 0 0 0 1px rgb(255 255 255 / .08), 0 18px 36px -16px rgb(0 0 0 / .6); }
+  .hero__art .loop-pause:focus-visible { outline-color: var(--ground-ink); }
+  .hero__proof { font-size: var(--t-small); color: var(--muted); }
+  @media (max-width: 1279px) { .hero__art > .ly-piece--note { display: none; } .hero__art > .ly-piece--main { left: var(--s-6); width: calc(100% - 2 * var(--s-6)); } .hero__art .mbar { padding-right: 12px; border-radius: 8px; } .hero__art .ly-piece--main > .ta { margin-inline: auto; } }
+  @media (max-width: 1023px) { .hero__art .ly-piece--main > .ta { max-width: 420px; } }
+  @media (max-width: 639px) { .hero__art .mbar { display: none; } .hero__art .ly-piece--main > .ta { margin-top: 0; } .hero__art > button.loop-pause.loop-pause { top: 6px; bottom: auto; right: 6px; } }
+  /* #trips: the app-frame recipe (sections-library.md), in the app's own colours */
+  .app.ui { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); margin-top: var(--s-7); overflow: hidden; background: #0d0d0f; border: 1px solid rgb(255 255 255 / .1); border-radius: 12px; box-shadow: 0 30px 60px -30px rgb(0 0 0 / .6); }
+  .app > .app__pane { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+  .app > .app__pane + .app__pane { border-left: 1px solid rgb(255 255 255 / .08); }
+  .app > .app__pane::after { content: ""; position: absolute; inset: auto 0 0 0; height: 64px; background: linear-gradient(transparent, #0d0d0f); pointer-events: none; }
+  .app .ta__in { border-radius: 0; box-shadow: none; font-size: clamp(9px, 100cqw / 36, 12.5px); min-height: 100%; }
+  .app .ta { height: 100%; }
+  .tl__head { display: flex; justify-content: space-between; gap: 1em; padding: 1.3em 1.6em; background: rgb(255 255 255 / .03); }
+  .tl__day { display: flex; justify-content: space-between; padding: .9em 1.6em; background: #1a1a1a; color: var(--yel); font-size: .9em; letter-spacing: .13em; }
+  .tl__row { display: flex; justify-content: space-between; gap: 1em; margin: 0 1.6em; padding: 1.3em 0; border-bottom: 1px solid rgb(255 255 255 / .07); }
+  .tl__row.is-sel { margin: 0; padding-inline: 1.6em; background: rgb(255 199 13 / .07); }
+  .tl__row b { display: block; font-size: 1.2em; }
+  .tl__row span { display: block; margin: .45em 0 .6em; font-size: .9em; color: var(--lbl); }
+  .tl__row em { display: inline-block; margin-right: .5em; padding: .4em .6em; border-radius: .3em; background: rgb(255 255 255 / .08); color: rgb(255 255 255 / .7); font-size: .75em; font-style: normal; letter-spacing: .05em; }
+  .tl__row > :last-child { flex: none; text-align: right; }
+  .tl__row > :last-child b { font-size: 1.4em; color: var(--yel); }
+  .tl__row > :last-child span { margin: .35em 0 0; font-size: .85em; }
+  .tl__print { width: 1.1em; height: 1.1em; margin: .5em 0 0 auto; color: var(--yel); }
+  /* the receipt printer: a slot, and the paper feeding out of it in the motor's steps (a card loop, motion.md) */
+  .rp { --m-cycle: 4s; --m-still: .9; background: radial-gradient(80% 60% at 50% 0, #1d1d21, #0d0d0f); }
+  .rp__slot { position: absolute; left: 50%; top: 28px; z-index: 2; width: 384px; height: 14px; margin-left: -192px; border-radius: 7px; background: #000; box-shadow: 0 0 0 1px rgb(255 255 255 / .12), 0 6px 14px rgb(0 0 0 / .6); }
+  .rp__feed { position: absolute; z-index: 0; left: 0; right: 0; top: 35px; bottom: 0; overflow: hidden; }
+  .rp__feed > div { position: absolute; left: 50%; top: 0; }
+  .rp__new { z-index: 1; }
+  /* the paper comes out under the slot as the motor steps; each block of lines shows once the paper has passed it */
+  .rp__new .rc { animation: rp-feed 4s infinite; }
+  .rp__new .rc > * { animation: rp-g5 4s infinite step-end; }
+  .rp__new .rc > :nth-child(-n+3) { animation-name: rp-g1; }
+  .rp__new .rc > :nth-child(n+4):nth-child(-n+5) { animation-name: rp-g2; }
+  .rp__new .rc > :nth-child(n+6):nth-child(-n+7) { animation-name: rp-g3; }
+  .rp__new .rc > :nth-child(n+8):nth-child(-n+10) { animation-name: rp-g4; }
+  @keyframes rp-feed { 0%, 4% { clip-path: inset(0 0 100% 0); animation-timing-function: steps(28, end); } 58%, 100% { clip-path: inset(0 0 0 0); } }
+  @keyframes rp-g1 { 0% { opacity: 0; } 15% { opacity: 1; } }
+  @keyframes rp-g2 { 0% { opacity: 0; } 28% { opacity: 1; } }
+  @keyframes rp-g3 { 0% { opacity: 0; } 38% { opacity: 1; } }
+  @keyframes rp-g4 { 0% { opacity: 0; } 49% { opacity: 1; } }
+  @keyframes rp-g5 { 0% { opacity: 0; } 58% { opacity: 1; } }
+  .rp__old { animation: rp-drop 4s infinite; }
+  .rp__keys { position: absolute; top: 64px; right: 24px; z-index: 2; display: grid; gap: 8px; width: 132px; }
+  .key { display: block; padding: 11px 0; border-radius: 6px; background: linear-gradient(#3f3f3f, #242424); box-shadow: 0 1px 0 rgb(255 255 255 / .12) inset, 0 3px 0 #0a0a0a; color: rgb(255 255 255 / .88); font: 700 11px/1 var(--font-mono); letter-spacing: .08em; text-align: center; }
+  .key--y { background: linear-gradient(#ffd23a, #e0ad00); color: #000; }
+  .rp .rc { zoom: var(--z, 1); }
+  .rp__feed > div { width: auto; margin-left: 0; transform: translateX(-50%); }
+  @keyframes rp-drop { 0% { opacity: 1; transform: translate(-50%, 0); } 20%, 100% { opacity: 0; transform: translate(-50%, 48px); } }
+  @media (min-width: 1280px) { .rp__slot { width: 500px; margin-left: -250px; } .rp__keys { right: 32px; } }
+  @media (max-width: 1279px) { .rp__keys { display: none; } }
+  @media (max-width: 1023px) {
+    .app.ui { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app > .app__pane--list { max-height: 252px; }
+    .app > .app__pane + .app__pane { border-left: 0; border-top: 1px solid rgb(255 255 255 / .08); }
+    .app .app__pane--list .ta__roof, .app .app__pane--list .ta__chk { display: none; }
+  }
+  @media (max-width: 639px) {
+    .app.ui { grid-template-rows: minmax(0, 1fr); }
+    .app > .app__pane--list { display: none; }
+    .app > .app__pane + .app__pane { border-top: 0; }
+    .rp__slot { width: 300px; margin-left: -150px; top: 20px; }
+    .rp__feed { top: 27px; }
+  }
+  /* #logbook: the Log Book tab, cut by the frame's bottom */
+  .frame--split .stage > .at-rise { --ax: max(24px, 50% - 220px); --ay: 48px; }
+  @media (min-width: 1024px) { .frame--lb { --ratio: 100%; } }
+  @media (max-width: 1023px) { .frame--lb { --ratio: 66%; } }
+  @media (max-width: 639px) { .frame--lb { --ratio: 80%; } .lb-more { display: none; } }
+  .seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); padding: .3em; border-radius: .6em; background: #0b0b0b; text-align: center; font-size: .95em; letter-spacing: .08em; color: rgb(255 255 255 / .65); white-space: nowrap; }
+  .seg > * { padding: .85em 0; border-radius: .4em; }
+  .seg .on, .seg [aria-pressed="true"] { background: var(--yel); color: #000; }
+  .lb__top { display: flex; justify-content: space-between; align-items: flex-end; gap: 1em; }
+  .lb__top > div { display: grid; gap: .7em; }
+  .lb__kv { display: grid; gap: .8em; justify-items: end; }
+  .lb__kv div { display: flex; gap: .8em; align-items: baseline; white-space: nowrap; }
+  .lb__kv dt { font-size: .85em; letter-spacing: .12em; color: var(--lbl); }
+  .lb__kv dd { font-size: 1.1em; color: rgb(255 255 255 / .9); }
+  .lb__bars { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: .6em; align-items: end; height: 8.4em; }
+  .lb__bars i { height: var(--v); background: color-mix(in srgb, var(--yel) 85%, transparent); }
+  .lb__bars i:last-child { height: .2em; background: var(--red); }
+  .lb__rows { display: grid; gap: 1.1em; }
+  .lb__rows > div { display: grid; gap: .5em; }
+  .lb__rows .ta__row b:last-child { color: var(--yel); }
+  .lb__rows .bar { height: .4em; }
+  /* #features: the Settings tab, in parts */
+  #features .panel { --p-h: clamp(220px, 100svh - 560px, 312px); background: var(--ground-bg); }
+  #features .ta__in { font-size: clamp(10px, 100cqw / 32, 15px); }
+  #features .pj { font-size: 15px; }
+  .caps { display: flex; gap: .8em; }
+  .caps span { display: inline-flex; align-items: baseline; gap: .7em; padding: 1em 1.2em; border-radius: .8em; background: #0b0b0b; box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1); color: rgb(255 255 255 / .6); font-size: .95em; }
+  .caps b { font-size: 1.5em; color: var(--yel); }
+  .hint { font-size: .85em; letter-spacing: .04em; line-height: 1.5; color: var(--lbl); }
+  .tg { position: relative; flex: none; width: 3.4em; height: 1.8em; border-radius: 1em; background: rgb(255 255 255 / .16); }
+  .tg::after { content: ""; position: absolute; top: .2em; left: .2em; width: 1.4em; height: 1.4em; border-radius: 50%; background: #c4c4c4; }
+  .tg.on { background: var(--yel); }
+  .tg.on::after { left: auto; right: .2em; background: #000; }
+  .opt { display: flex; justify-content: space-between; align-items: center; gap: 1em; font-size: 1.05em; }
+  .kbd { display: flex; align-items: center; gap: .7em; }
+  .kbd b { display: grid; place-items: center; width: 2.4em; height: 2.2em; border-radius: .4em; background: rgb(255 255 255 / .1); font-size: 1.1em; }
+  .kbd span { margin-left: .5em; font-size: .9em; color: rgb(255 255 255 / .6); }
+  .plan .seg { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .plan .seg button { min-height: 44px; padding: 0; border: 0; font: inherit; letter-spacing: inherit; color: inherit; background: none; cursor: pointer; transition: background-color .15s, color .15s; }
+  .plan .seg button:hover { background: rgb(255 255 255 / .1); color: #fff; }
+  .plan .seg button[aria-pressed="true"] { background: var(--yel); color: #000; }
+  .plan .seg button:focus-visible { outline: 2px solid var(--yel); outline-offset: 2px; }
+  .pv { display: grid; gap: .6em; }
+  .pv__v { display: flex; align-items: baseline; gap: .7em; flex-wrap: wrap; }
+  .pv__v b { font-size: 2.2em; font-weight: 800; color: var(--yel); }
+  .pv__v span { font-size: .9em; color: rgb(255 255 255 / .6); }
+  .pv__x { font-size: 1.1em; letter-spacing: .1em; }
+  .pv.is-swap { animation: pv-in .24s cubic-bezier(.2, .8, .2, 1); }
+  @keyframes pv-in { from { opacity: .2; transform: translateY(4px); } }
+  .pv [hidden] { display: none; }
+  .pj { overflow: hidden; border-radius: 10px; background: #1c1c21; color: #e9e6dc; box-shadow: 0 0 0 1px rgb(255 255 255 / .1), 0 24px 40px -24px rgb(0 0 0 / .6); font: 400 13px/1.6 var(--font-mono); }
+  .pj__bar { padding: 9px 16px; border-bottom: 1px solid rgb(255 255 255 / .1); color: rgb(255 255 255 / .7); }
+  .pj pre { margin: 0; padding: 12px 16px 20px; font: inherit; white-space: pre; }
+  .pj mark { background: none; color: #ffc70d; }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    #features { --h: 1; }
+    #features > .wrap { display: block; }
+    #features > .wrap > .grid { margin-top: var(--card-gap, 24px); }
+    #features .panel { --p-h: calc((100svh - 730px) / 2); }
+  }
+  @media (max-width: 1023px) { #features .at-rise { --fit-max: 300px !important; --ay: 14px !important; --ay-sm: 12px !important; } }
+  @media (max-width: 639px) { #features .panel { --p-h: 126px; } }
+  /* the price figures and the install steps */
+  .figs { display: grid; gap: var(--s-4); margin-top: var(--s-6); }
+  .figs p { margin: 0; }
+  .figs .t-small { margin-top: var(--s-1); }
+  .steps-list > div { padding: var(--s-5) 0; border-bottom: 1px solid var(--line); }
+  .steps-list > div:first-child { padding-top: 0; }
+  .steps-list__t { font: 500 var(--t-lead)/1.4 var(--font-text); margin: 0 0 var(--s-2); }
+  .steps-list p { margin: 0; max-width: 56ch; }
+  @media (min-width: 640px) and (max-width: 1023px) { .figs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-5); } .price-led.price-led { max-width: 300px; } }
+  .price-led { margin-top: var(--s-6); max-width: 360px; }
+  .price-led .ta__in { border-radius: .8em; }
+  .price-led .ta__led { padding: 1.4em 1.8em; border-radius: 0; }
+  .price-led .led { --dh: 8em; --lg: .35em; }
+  @media (min-width: 1024px) and (max-height: 820px) { .price-led { max-width: 240px; } }
+  /* the questions: the app on its first launch */
+  .faq-app { margin-top: var(--s-6); max-width: 440px; }
+  @media (min-width: 1024px) { #questions .grid--top { grid-template-rows: auto 1fr; } #questions .grid--top > .span-5 { grid-row: 1; } #questions .faq { grid-row: 1 / span 2; } #questions .faq-app { grid-column: 1 / span 5; grid-row: 2; align-self: start; } }
+  @media (min-width: 640px) and (max-width: 1023px) { #questions .grid--top { display: grid; column-gap: var(--s-6); } #questions .faq-app { margin-top: 0; } #questions .faq-app .ta__body > .hint:last-child { display: none; } }
+  @media (min-width: 640px) and (max-width: 1023px) { #questions .grid--top { grid-template-columns: minmax(0, 1fr); } #questions .grid--top > * { grid-column: 1; } #questions .faq-app { grid-row: 2; max-width: 340px; margin-block: var(--s-6); } #questions .faq { grid-row: 3; } }
+  @media (max-width: 639px) { #questions .faq__item { padding-block: 56px; } #questions .faq__item:first-child { padding-top: 0; } .faq-app { max-width: none; margin-top: var(--s-7); } }
+  @media (prefers-reduced-motion: reduce) { .lamp i, .lamp.on.lamp--hire i { animation: none !important; } .flag__arm, .tape i { transition: none; } }
+</style>
+<script src="analytics.js" defer></script>
+</head>
+<body>
+<!-- type: software
+     deal (kept from the first build): hero collage, nav nav-centre, close close-type, footer footer-dark,
+           rhythm surface-pairs, buttons pill, mark initial, lit ground sage, effect grain-gradient (hero art, still);
+           palette: the app's own colours (start.mjs brand); type geist
+     moments: counter-rolls on the three figures of #get
+     motion: the hero's one timed loop (the meter replays a trip), a card loop in the #trips app-frame (the receipt printer), the plan picker in #features (click) -->
+
+<header class="nav nav--centre">
+  <div class="wrap nav__bar">
+    <a class="skip-link" href="#top">Skip to content</a>
+    <a class="nav__logo" href="#top"><span class="mark mark--initial" aria-hidden="true">T</span>Taxi Meter</a>
+    <nav class="nav__links" aria-label="Main">
+      <div class="nav__item"><a class="nav__link" href="#trips">Trips</a></div>
+      <div class="nav__item"><a class="nav__link" href="#logbook">Log book</a></div>
+      <div class="nav__item"><a class="nav__link" href="#get">Get it</a></div>
+      <div class="nav__item"><a class="nav__link" href="#features">Settings</a></div>
+      <div class="nav__item"><a class="nav__link" href="#questions">Questions</a></div>
+    </nav>
+    <div class="nav__actions">
+      <!-- opens the email gate (#gate) -->
+      <a class="btn btn--primary" href="#gate">Get Taxi Meter</a>
+    </div>
+    <button class="nav__toggle" type="button" aria-expanded="false" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h14M2 13h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="top">
+  <section class="hero hero--collage" data-enter aria-labelledby="hero-h">
+    <div class="wrap"><div class="hero-text grid hero__grid">
+      <div class="hero__text span-5">
+        <h1 id="hero-h">Menu-bar taxi meter for AI coding agents</h1>
+        <p class="hero__lead">Taxi Meter reads Claude Code's logs on your Mac and shows the fare at API list prices: live, per trip, per day and per month. It is free and open source.</p>
+        <div class="btn-row">
+          <!-- opens the email gate (#gate) -->
+          <a class="btn btn--primary" href="#gate">Get Taxi Meter</a>
+          <a class="btn btn--secondary" href="#trips">See the trips</a>
+        </div>
+        <p class="hero__proof">Apple Silicon, macOS 13 or later. Works with Claude Code today.</p>
+      </div>
+      <div class="hero__art span-6 start-7" role="img" aria-label="Taxi Meter open under its menu-bar item, replaying a trip: the For hire lamp hands over to Hired, the yellow flag swings down, the red seven-segment fare rolls from 0.00 to 29.26 dollars and the meter tape's bars grow; beside it the Shift card shows 4 hours 34 minutes left in the 5-hour window" data-fx="grain-gradient" data-fx-seed="7" data-fx-params='{"speed":0,"grainMotion":0}' data-ui-pause-host>
+        <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs><polygon id="sa" points="9.02 2.89 12.17 0 32.99 0 35.62 2.89 32.47 5.78 11.65 5.78"/><polygon id="sg" points="6.49 31 9.64 28.11 30.46 28.11 33.09 31 29.94 33.89 9.12 33.89"/><polygon id="sd" points="3.96 59.11 7.11 56.22 27.93 56.22 30.56 59.11 27.41 62 6.59 62"/><polygon id="sf" points="8.14 3.7 10.77 6.59 8.9 27.3 5.75 30.19 3.12 27.3 4.99 6.59"/><polygon id="sb" points="36.36 3.7 38.99 6.59 37.12 27.3 33.97 30.19 31.34 27.3 33.21 6.59"/><polygon id="se" points="5.61 31.81 8.24 34.7 6.37 55.41 3.22 58.3 0.59 55.41 2.46 34.7"/><polygon id="sc" points="33.83 31.81 36.46 34.7 34.59 55.41 31.44 58.3 28.81 55.41 30.68 34.7"/></defs><symbol id="d0" viewBox="0 0 40 62"><use href="#sa"/><use href="#sb"/><use href="#sc"/><use href="#sd"/><use href="#se"/><use href="#sf"/></symbol><symbol id="d1" viewBox="0 0 40 62"><use href="#sb"/><use href="#sc"/></symbol><symbol id="d2" viewBox="0 0 40 62"><use href="#sa"/><use href="#sb"/><use href="#sd"/><use href="#se"/><use href="#sg"/></symbol><symbol id="d3" viewBox="0 0 40 62"><use href="#sa"/><use href="#sb"/><use href="#sc"/><use href="#sd"/><use href="#sg"/></symbol><symbol id="d4" viewBox="0 0 40 62"><use href="#sb"/><use href="#sc"/><use href="#sf"/><use href="#sg"/></symbol><symbol id="d5" viewBox="0 0 40 62"><use href="#sa"/><use href="#sc"/><use href="#sd"/><use href="#sf"/><use href="#sg"/></symbol><symbol id="d6" viewBox="0 0 40 62"><use href="#sa"/><use href="#sc"/><use href="#sd"/><use href="#se"/><use href="#sf"/><use href="#sg"/></symbol><symbol id="d7" viewBox="0 0 40 62"><use href="#sa"/><use href="#sb"/><use href="#sc"/></symbol><symbol id="d8" viewBox="0 0 40 62"><use href="#sa"/><use href="#sb"/><use href="#sc"/><use href="#sd"/><use href="#se"/><use href="#sf"/><use href="#sg"/></symbol><symbol id="d9" viewBox="0 0 40 62"><use href="#sa"/><use href="#sb"/><use href="#sc"/><use href="#sd"/><use href="#sf"/><use href="#sg"/></symbol><symbol id="dx" viewBox="0 0 40 62"></symbol><symbol id="car" viewBox="0 0 20 18"><path class="car__body" d="M3.6 9.4 5.3 4.9C5.6 4 6.3 3.5 7.1 3.5h5.8c.8 0 1.5.5 1.8 1.4l1.7 4.5c.9.4 1.5 1.3 1.5 2.3V14H2.1v-2.3c0-1 .6-1.9 1.5-2.3ZM3.6 9.4h12.8M3.2 14v2.3h2.6V14m8.4 0v2.3h2.6V14"/><circle class="car__lamp" cx="5.4" cy="11.7" r="1"/><circle class="car__lamp" cx="14.6" cy="11.7" r="1"/></symbol></svg>
+        <div class="ly-piece ly-piece--main" aria-hidden="true">
+          <div class="mbar"><span><svg class="car is-full" data-car><use href="#car"/></svg><b data-mbar style="font-weight:500">$29.26</b></span></div>
+          <div class="ui ui-taxi ta" data-meter><div class="ta__in">
+            <div class="ta__roof"><span>TAXI</span></div>
+            <div class="ta__chk"></div>
+            <div class="ta__tabs"><span class="on">METER</span><span>TRIPS</span><span>LOG BOOK</span><span>SETTINGS</span></div>
+            <div class="ta__body">
+              <div class="ta__top">
+                <span class="lamp lamp--hire" data-lamp="hire"><i></i>FOR HIRE</span>
+                <span class="lamp lamp--hired on" data-lamp="hired"><i></i>HIRED</span>
+                <span class="lamp lamp--surge"><i></i>SURGE</span>
+                <span class="flag is-down" data-flag><span class="flag__arm"><span class="flag__plate"><span>FOR<br>HIRE</span></span><span class="flag__pole"></span></span><span class="flag__knob"></span></span>
+              </div>
+              <div class="ta__led" data-led-box>
+                <p class="ta__cur">FARE<b>$</b></p>
+                <div class="led" data-led><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#dx"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#dx"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d2"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d9"/></svg></i><i class="dp"></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d2"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d6"/></svg></i></div>
+              </div>
+              <div class="ta__reads"><span>TODAY<b>$7.36</b></span><span>7 DAYS<b>$556.05</b></span><span>RATE/MIN<b data-rate>$0.00</b></span><span>TOKENS<b data-tok>51M</b></span></div>
+              <div class="ta__card">
+                <div class="ta__row"><span class="lbl">METER TAPE · LAST 60 MIN</span><span style="font-size:.95em;color:rgb(255 255 255/.85)">$7.36</span></div>
+                <div class="tape" data-tape><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i style="--v:74%"></i><i style="--v:16%"></i><i style="--v:3%"></i><i style="--v:16%"></i><i class="z"></i><i class="z"></i><i style="--v:46%"></i><i style="--v:80%"></i><i class="z"></i><i class="z"></i><i style="--v:27%"></i><i style="--v:3%"></i><i class="z"></i><i class="z"></i><i class="z"></i><i class="z"></i><i style="--v:100%"></i><i style="--v:8%"></i><i style="--v:28%"></i><i style="--v:5%"></i><i style="--v:5%"></i><i style="--v:12%"></i><i style="--v:4%"></i><i style="--v:7%"></i><i style="--v:11%"></i><i style="--v:5%"></i><i style="--v:23%"></i><i style="--v:11%"></i><i style="--v:4%"></i><i style="--v:31%"></i><i style="--v:12%"></i><i style="--v:22%"></i><i style="--v:12%"></i></div>
+                <div class="ta__foot"><span>60 MIN AGO</span><span>NOW</span></div>
+              </div>
+            </div>
+          </div></div>
+        </div>
+        <div class="ly-piece ly-piece--note ui ui-taxi ta" aria-hidden="true">
+          <div class="ta__row"><span class="lbl">SHIFT · 5H WINDOW</span><span>4H 34M LEFT</span></div>
+          <div class="bar"><i style="--v:9%"></i></div>
+          <div class="ta__row" style="align-items:start">
+            <span style="display:grid;gap:.3em"><span class="lbl" style="font-size:.8em">SO FAR</span><span style="font-size:1.15em">$4.46</span></span>
+            <span style="display:grid;gap:.3em"><span class="lbl" style="font-size:.8em">AT THIS PACE</span><span style="font-size:1.15em">$52.14</span></span>
+            <span style="display:grid;gap:.3em"><span class="lbl" style="font-size:.8em">RESETS</span><span style="font-size:1.15em">09:30</span></span>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="section" id="trips" aria-labelledby="trips-h">
+    <div class="wrap">
+      <div class="grid grid--top">
+        <h2 class="span-5" id="trips-h">Every agent session is a trip</h2>
+        <p class="span-6 start-7">The Trips tab lists each Claude Code session by day: project, pickup and drop-off, models, fare and tokens. Click a trip and its receipt prints, ready to save as a PNG or copy. <a class="link" href="#logbook">See the log book</a></p>
+      </div>
+      <div class="ui app fill" data-visual role="img" aria-label="Taxi Meter's Trips tab: today's trips total 30.38 dollars, the first a 6 hour 53 minute trip for 29.26 dollars; beside it the receipt printer feeds out that trip's receipt, then a day receipt and a monthly statement" data-ui-pause-host>
+        <div class="app__pane app__pane--list" aria-hidden="true">
+          <div class="ui ui-taxi ta"><div class="ta__in">
+            <div class="ta__roof"><span>TAXI</span></div>
+            <div class="ta__chk"></div>
+            <div class="ta__tabs"><span>METER</span><span class="on">TRIPS</span><span>LOG BOOK</span><span>SETTINGS</span></div>
+            <div class="tl__head lbl"><span>TRIPS · ONE PER AGENT SESSION</span><span>99 IN 30 DAYS</span></div>
+            <div class="tl__day"><span>TODAY</span><span>$30.38</span></div>
+            <div class="tl__row is-sel"><div><b>web-app</b><span>22:01–04:54 · 6H 53M</span><em>FABLE-5-2</em><em>OPUS-5-5</em></div><div><b>$29.26</b><span>51M TOK</span><svg class="tl__print" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 6V2.5h7V6M4.5 11.5h-2v-5h11v5h-2M4.5 9.5h7v4h-7z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></div></div>
+            <div class="tl__row"><div><b>api</b><span>04:38–04:39 · 1M</span><em>OPUS-5-5</em></div><div><b>$1.12</b><span>814K TOK</span></div></div>
+            <div class="tl__day"><span>YESTERDAY</span><span>$94.08</span></div>
+            <div class="tl__row"><div><b>web-app</b><span>17:50–23:19 · 5H 28M</span><em>FABLE-5-2</em></div><div><b>$58.57</b><span>122M TOK</span></div></div>
+            <div class="tl__row"><div><b>docs</b><span>21:10–21:12 · 1M</span><em>FABLE-5-2</em></div><div><b>$2.26</b><span>1M TOK</span></div></div>
+            <div class="tl__row"><div><b>web-app</b><span>17:50–17:54 · 3M</span><em>FABLE-5-2</em></div><div><b>$3.48</b><span>1.8M TOK</span></div></div>
+            <div class="tl__row"><div><b>landing</b><span>15:11–15:11 · 1M</span><em>FABLE-5-2</em></div><div><b>$0.05</b><span>119K TOK</span></div></div>
+          </div></div>
+        </div>
+        <div class="app__pane app__pane--open rp" data-m-loop aria-hidden="true">
+          <div class="rp__slot"></div>
+          <div class="rp__keys"><span class="key key--y">SAVE PNG</span><span class="key">COPY</span></div>
+          <div class="rp__feed">
+            <div class="rp__old"><div class="ui ui-taxi rc">
+              <p class="rc__brand">TAXI METER</p><i class="rc__chk"></i><p class="rc__title">MONTHLY STATEMENT</p><i class="rc__rule"></i>
+              <dl><div><dt>MONTH</dt><dd>NOVEMBER 2026</dd></div><div><dt>TRIPS</dt><dd>64</dd></div><div><dt>TOKENS</dt><dd>3,046,312,807</dd></div></dl><i class="rc__rule"></i>
+              <dl><div><dt>WEB-APP</dt><dd>$354.58</dd></div><div><dt>MOBILE</dt><dd>$154.35</dd></div><div><dt>CLI</dt><dd>$114.39</dd></div><div><dt>DOCS</dt><dd>$49.21</dd></div><div><dt>INFRA</dt><dd>$38.68</dd></div><div><dt>DESIGN</dt><dd>$33.75</dd></div><div><dt>OTHER</dt><dd>$468.23</dd></div></dl><i class="rc__rule"></i>
+              <div class="rc__total"><span>TOTAL FARE</span><b>$1,213.19</b></div><dl><div><dt>CACHE SAVED</dt><dd>$12,641.72</dd></div></dl><i class="rc__rule"></i>
+              <p class="rc__foot">API LIST PRICES. NO TIP NEEDED.</p><p class="rc__thanks">THANK YOU FOR RIDING</p>
+            </div></div>
+            <div class="rp__new"><div class="ui ui-taxi rc">
+              <p class="rc__brand">TAXI METER</p><i class="rc__chk"></i><p class="rc__title">AI AGENT FARE RECEIPT</p><i class="rc__rule"></i>
+              <dl><div><dt>DATE</dt><dd>18 NOV 2026 04:55</dd></div><div><dt>TRIP TIME</dt><dd>6H 54M</dd></div><div><dt>TOKENS</dt><dd>50,751,923</dd></div></dl><i class="rc__rule"></i>
+              <dl><div><dt>FABLE-5-2</dt><dd>$23.02</dd></div><div><dt>OPUS-5-5</dt><dd>$6.24</dd></div></dl><i class="rc__rule"></i>
+              <div class="rc__total"><span>TOTAL FARE</span><b>$29.26</b></div><dl><div><dt>TODAY SO FAR</dt><dd>$7.36</dd></div></dl><i class="rc__rule"></i>
+              <p class="rc__foot">API LIST PRICES. NO TIP NEEDED.</p><p class="rc__thanks">THANK YOU FOR RIDING</p>
+            </div></div>
+          </div>
+          <template data-rc><div class="ui ui-taxi rc">
+            <p class="rc__brand">TAXI METER</p><i class="rc__chk"></i><p class="rc__title">DAILY FARE RECEIPT</p><i class="rc__rule"></i>
+            <dl><div><dt>DATE</dt><dd>WED 18 NOV 2026</dd></div><div><dt>TRIPS</dt><dd>2</dd></div><div><dt>TOKENS</dt><dd>12,492,459</dd></div></dl><i class="rc__rule"></i>
+            <dl><div><dt>LANDING</dt><dd>$3.25</dd></div><div><dt>API</dt><dd>$2.91</dd></div><div><dt>WEB-APP</dt><dd>$1.20</dd></div></dl><i class="rc__rule"></i>
+            <div class="rc__total"><span>TOTAL FARE</span><b>$7.36</b></div><dl><div><dt>CACHE SAVED</dt><dd>$45.72</dd></div></dl><i class="rc__rule"></i>
+            <p class="rc__foot">API LIST PRICES. NO TIP NEEDED.</p><p class="rc__thanks">THANK YOU FOR RIDING</p>
+          </div></template>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="logbook" aria-labelledby="logbook-h">
+    <div class="wrap">
+      <div class="grid grid--top">
+        <div class="span-5">
+          <h2 id="logbook-h">Log book for the week and the month</h2>
+          <p class="t-lead" style="margin-top: var(--s-5)">The Log Book adds up 7 days, 30 days or this month: fare per day, top projects, models, trips and what caching saved.</p>
+          <p class="lb-more" style="margin-top: var(--s-5)">Tap a day's bar for that day's receipt. Month statement prints the whole month. Export CSV writes every trip to your Desktop.</p>
+          <p style="margin-top: var(--s-5)">On the maker's Mac, the last 30 days came to $2,757.96 over 99 trips.</p>
+          <p style="margin-top: var(--s-5)"><a class="link" href="#features">See the settings</a></p>
+        </div>
+        <div class="frame frame--split frame--lb span-6 start-7" role="img" aria-label="Taxi Meter's Log Book tab for 7 days: 556.05 dollars on a yellow seven-segment display, 79.44 dollars a day, 41 trips, 6,610.89 dollars saved by caching, a bar for each day and the top projects">
+          <div class="stage stage--fade-b" aria-hidden="true"><div class="at-rise fit" style="--fit-max:440px">
+            <div class="ui ui-taxi ta"><div class="ta__in">
+              <div class="ta__roof"><span>TAXI</span></div>
+              <div class="ta__chk"></div>
+              <div class="ta__tabs"><span>METER</span><span>TRIPS</span><span class="on">LOG BOOK</span><span>SETTINGS</span></div>
+              <div class="ta__body">
+                <div class="seg"><span class="on">7 DAYS</span><span>30 DAYS</span><span>THIS MONTH</span></div>
+                <div class="lb__top">
+                  <div><p class="lbl">FARE · 7 DAYS</p><div class="led led--y"><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#dx"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#dx"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d5"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d5"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d6"/></svg></i><i class="dp"></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d0"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d5"/></svg></i></div></div>
+                  <dl class="lb__kv"><div><dt>PER DAY</dt><dd>$79.44</dd></div><div><dt>TRIPS</dt><dd>41</dd></div><div><dt>CACHE SAVED</dt><dd>$6,610.89</dd></div></dl>
+                </div>
+                <p class="lbl">PER DAY · TAP A BAR FOR ITS RECEIPT</p>
+                <div class="lb__bars"><i style="--v:34%"></i><i style="--v:100%"></i><i style="--v:8%"></i><i style="--v:9%"></i><i style="--v:12%"></i><i style="--v:43%"></i><i></i></div>
+                <div class="ta__foot" style="margin-top:-.6em"><span>12 NOV</span><span>TODAY</span></div>
+                <p class="lbl">TOP PROJECTS</p>
+                <div class="lb__rows">
+                  <div><div class="ta__row"><b>web-app</b><b>$259.84</b></div><div class="bar"><i style="--v:100%"></i></div></div>
+                  <div><div class="ta__row"><b>docs</b><b>$49.21</b></div><div class="bar"><i style="--v:19%"></i></div></div>
+                  <div><div class="ta__row"><b>design</b><b>$33.75</b></div><div class="bar"><i style="--v:13%"></i></div></div>
+                  <div><div class="ta__row"><b>scripts</b><b>$23.99</b></div><div class="bar"><i style="--v:9%"></i></div></div>
+                </div>
+              </div>
+            </div></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="get" style="--hm: 2" aria-labelledby="get-h">
+    <div class="wrap">
+      <div class="grid grid--top">
+        <div class="span-5">
+          <h2 id="get-h">Taxi Meter is free, and so is its code</h2>
+          <p class="t-lead" style="margin-top: var(--s-4)">Download the zip from GitHub. The code is open under AGPL-3.0: read it, change it, build it yourself.</p>
+          <div class="ui ui-taxi ta price-led" role="img" aria-label="The meter's display reads a fare of 0.00 dollars"><div class="ta__in" aria-hidden="true"><div class="ta__led"><p class="ta__cur">FARE<b>$</b></p><div class="led"><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#dx"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d0"/></svg></i><i class="dp"></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d0"/></svg></i><i class="dg"><svg class="gh"><use href="#d8"/></svg><svg><use href="#d0"/></svg></i></div></div></div></div>
+          <div class="figs" data-moment="counter-rolls">
+            <div><p class="t-stat">$0</p><p class="t-small muted">no account, no subscription</p></div>
+            <div><p class="t-stat">100%</p><p class="t-small muted">of the code on GitHub, AGPL-3.0</p></div>
+            <div><p class="t-stat">macOS 13</p><p class="t-small muted">or later, on Apple Silicon</p></div>
+          </div>
+          <!-- DOWNLOAD_LINK, GITHUB_LINK -->
+          <p style="margin-top: var(--s-5)"><a class="link" href="#gate">Get Taxi Meter</a> &middot; <a class="link" href="https://github.com/hammyasf/taxi-meter">Read the code</a></p>
+        </div>
+        <div class="steps-list span-6 start-7">
+          <div><p class="steps-list__t">1. Unzip the download</p><p>It is a zip from GitHub that holds Taxi Meter.app.</p></div>
+          <div><p class="steps-list__t">2. Drag the app to Applications</p><p>Then open it from there.</p></div>
+          <div><p class="steps-list__t">3. Click Open Anyway, once</p><p>Apple has not notarized the app yet, so macOS blocks the first launch. Open System Settings &gt; Privacy &amp; Security and click Open Anyway.</p></div>
+          <div><p class="steps-list__t">4. Watch the menu bar</p><p>The first launch reads 30 days of logs, once.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section g2 ground-surface" id="features" aria-labelledby="features-h">
+    <div class="wrap">
+      <div class="group">
+        <div class="section-head">
+          <h2 id="features-h">Settings for caps, plans and prices</h2>
+        </div>
+        <div class="grid">
+          <article class="card card--row m-nolift span-6">
+            <h3>Warns at 50, 80 and 100% of a cap</h3>
+            <p>Set a daily and a 7-day fare cap. A notification arrives at each step, and 0 turns a cap off.</p>
+            <div class="panel panel--flush" role="img" aria-label="The Fare caps settings: a daily cap and a 7-day cap, both at 0 dollars, and the Cap alerts switch turned on">
+              <div class="stage"><div class="at-rise fit" style="--fit-max:520px;--ax:max(24px, 50% - 260px);--ay:32px;--ay-sm:16px">
+                <div class="ui ui-taxi ta" aria-hidden="true"><div class="ta__in"><div class="ta__body">
+                  <p class="lbl">FARE CAPS</p>
+                  <div class="caps"><span>DAILY <b>$ 0</b></span><span>7-DAY <b>$ 0</b></span></div>
+                  <p class="hint">0 TURNS A CAP OFF. YOU GET AN ALERT AT 50, 80 AND 100%.</p>
+                  <div class="opt"><span>CAP ALERTS</span><span class="tg on"></span></div>
+                </div></div></div>
+              </div></div>
+            </div>
+          </article>
+          <article class="card card--row m-nolift span-6">
+            <h3>Shows what your plan covered</h3>
+            <p>Pick your plan and the Log Book divides this month's API fare by its price. Click a plan below.</p>
+            <div class="panel panel--flush">
+              <div class="stage"><div class="at-rise fit" style="--fit-max:520px;--ax:max(24px, 50% - 260px);--ay:32px;--ay-sm:16px">
+                <div class="ui ui-taxi ta plan"><div class="ta__in"><div class="ta__body">
+                  <div class="seg" role="group" aria-label="Your plan">
+                    <button type="button" data-plan="0" aria-pressed="false">API</button>
+                    <button type="button" data-plan="20" aria-pressed="false">PRO $20</button>
+                    <button type="button" data-plan="100" aria-pressed="false">MAX $100</button>
+                    <button type="button" data-plan="200" aria-pressed="true">MAX $200</button>
+                  </div>
+                  <div class="ta__card pv" aria-live="polite" data-pv>
+                    <p class="lbl" data-pv-k>YOUR $200.00/MO PLAN RODE</p>
+                    <p class="pv__v" data-pv-on><b>$1,213.19</b><span>OF API FARE THIS MONTH</span></p>
+                    <p class="pv__x" data-pv-x>6.1X ITS PRICE</p>
+                  </div>
+                </div></div></div>
+              </div></div>
+            </div>
+          </article>
+        </div>
+      </div>
+      <div class="grid">
+        <article class="card card--row m-nolift span-6">
+          <h3>Opens from any app with a shortcut</h3>
+          <p>Option-Command-T opens the meter. A tick sounds per cent, a bell per dollar, and the flag drops with each trip.</p>
+          <div class="panel panel--flush" role="img" aria-label="The Meter and Shortcut settings: tick and bell sounds on, open at login off, and the keys Option, Command and T">
+            <div class="stage"><div class="at-rise fit" style="--fit-max:520px;--ax:max(24px, 50% - 260px);--ay:32px;--ay-sm:16px">
+              <div class="ui ui-taxi ta" aria-hidden="true"><div class="ta__in"><div class="ta__body">
+                <p class="lbl">METER</p>
+                <div class="opt"><span>TICK AND BELL SOUNDS</span><span class="tg on"></span></div>
+                <div class="opt"><span>OPEN AT LOGIN</span><span class="tg"></span></div>
+                <p class="lbl">SHORTCUT</p>
+                <div class="kbd"><b>⌥</b><b>⌘</b><b>T</b><span>OPENS THE METER FROM ANY APP</span></div>
+              </div></div></div>
+            </div></div>
+          </div>
+        </article>
+        <article class="card card--row m-nolift span-6">
+          <h3>Reads prices from a file you can edit</h3>
+          <p>List prices per million tokens sit in prices.json. Change a rate when a price changes, then restart.</p>
+          <div class="panel panel--flush" role="img" aria-label="The file prices.json with the input, output and cache rates of one model">
+            <div class="stage"><div class="at-rise fit" style="--fit-max:520px;--ax:max(24px, 50% - 260px);--ay:32px;--ay-sm:16px">
+              <div class="ui ui-taxi pj" aria-hidden="true"><div class="pj__bar">prices.json</div><pre>{
+  "claude-fable-5-2": {
+    "cacheRead": 0.2,
+    "cacheWrite1h": 16,
+    "cacheWrite5m": 10,
+    "input": <mark>8</mark>,
+    "output": <mark>40</mark>
+  },</pre></div>
+            </div></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="questions" style="--hm: 2" aria-labelledby="questions-h">
+    <div class="wrap">
+      <div class="grid grid--top">
+        <div class="span-5">
+          <h2 id="questions-h">Questions</h2>
+        </div>
+        <div class="faq span-6 start-7">
+          <div class="faq__item"><h3>I pay for a subscription. Is the fare my bill?</h3><p>No. The fare is what the same use would cost on the API at list prices.</p></div>
+          <div class="faq__item"><h3>Does Taxi Meter send my logs anywhere?</h3><p>No. It reads ~/.claude/projects on your Mac and has no network code.</p></div>
+          <div class="faq__item"><h3>Why is Taxi Meter's first launch slower?</h3><p>It reads 30 days of logs once, with a progress bar, then only new lines.</p></div>
+          <div class="faq__item"><h3>How exact is the 5-hour window?</h3><p>It is an estimate built from your local logs.</p></div>
+          <div class="faq__item"><h3>What if a model is missing from the prices?</h3><p>The meter counts the calls it could not price. Add the rates to prices.json and restart.</p></div>
+          <div class="faq__item"><h3>Why is Taxi Meter free?</h3><p><a class="link" href="https://github.com/sponsors/hammyasf">Sponsors</a> pay for the next free toy.</p></div>
+        </div>
+        <div class="ui ui-taxi ta faq-app" role="img" aria-label="Taxi Meter on its first launch: a thin yellow bar under the roof and the Trips tab reading your logs, 64 percent done; under it the line: reads ~/.claude/projects on this Mac, no account, no network"><div class="ta__in" aria-hidden="true">
+            <div class="ta__roof"><span>TAXI</span></div>
+            <div class="ta__chk"></div>
+            <div class="ta__load" style="--v:64%"></div>
+            <div class="ta__tabs"><span>METER</span><span class="on">TRIPS</span><span>LOG BOOK</span><span>SETTINGS</span></div>
+            <div class="tl__head lbl"><span>TRIPS · ONE PER AGENT SESSION</span></div>
+            <div class="ta__body">
+              <div class="ta__card"><p class="hint" style="color:rgb(255 255 255/.6)">READING YOUR LOGS… 64%</p></div>
+              <p class="hint">READS ~/.CLAUDE/PROJECTS ON THIS MAC. NO ACCOUNT, NO NETWORK.</p>
+            </div>
+          </div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer closing footer--dark ground-inverse" id="contact" aria-labelledby="close-h">
+  <div class="wrap">
+    <div class="closing__cta close--type">
+      <div class="section-head">
+        <h2 id="close-h">Put a taxi meter in your menu bar</h2>
+        <p>Free and open source. Works with Claude Code on Apple Silicon.</p>
+      </div>
+      <!-- opens the email gate (#gate) -->
+      <a class="btn btn--primary btn--xl btn--wide" href="#gate">Get Taxi Meter<svg class="m-arrow" viewBox="0 0 12 12" aria-hidden="true"><path class="m-arrow__stem" d="M1 6h8"/><path class="m-arrow__head" d="M4.5 2.5 8 6l-3.5 3.5"/></svg></a>
+      <a class="tip" href="https://github.com/sponsors/hammyasf" aria-label="Tip the driver: sponsor Taxi Meter on GitHub">
+        <span class="tip__coin" aria-hidden="true"></span>
+        <span class="tip__lamp" aria-hidden="true">TIP</span>
+        <span class="tip__fare" aria-hidden="true">$<b>0.00</b></span>
+        <span class="tip__label" aria-hidden="true">Tip the driver<small>GITHUB SPONSORS</small></span>
+        <svg class="tip__heart" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.5s-7.2-4.4-9.2-8.9C1.4 8.4 3.4 5 6.8 5c2 0 3.5 1.1 5.2 3 1.7-1.9 3.2-3 5.2-3 3.4 0 5.4 3.4 4 6.6-2 4.5-9.2 8.9-9.2 8.9z"/></svg>
+      </a>
+    </div>
+    <div class="closing__links">
+      <div class="grid">
+        <div class="span-4 stack-4">
+          <a class="footer__mark" href="#top">Taxi Meter</a>
+        </div>
+        <div class="span-2 start-9 footer__col"><h3>Product</h3><ul><li><a href="#trips">Trips</a></li><li><a href="#logbook">Log book</a></li><li><a href="#features">Settings</a></li></ul></div>
+        <div class="span-2 footer__col"><h3>Get it</h3><ul><li><a href="#gate">Get it</a></li><li><a href="https://github.com/hammyasf/taxi-meter">Source code</a></li><li><a href="#gate">Newsletter</a></li><li><a href="https://github.com/sponsors/hammyasf">Sponsor on GitHub</a></li><li><a href="#questions">Questions</a></li></ul></div>
+      </div>
+      <div class="footer__legal">
+        <span>&copy; 2026 Taxi Meter. An independent toy, not affiliated with any AI company. Code under AGPL-3.0; the name and logo are reserved. This page counts visits with PostHog, without cookies; the app itself has no analytics.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<dialog class="gate" id="gate" aria-labelledby="get-h">
+  <div class="gate__in">
+    <a class="gate__x" href="#" aria-label="Close">&times;</a>
+    <h2 id="get-h">Get Taxi Meter by email</h2>
+    <p>Taxi Meter is free. Write your email, then click Confirm in the email we send: Taxi Meter downloads right away. You also get the next free toy when it ships; unsubscribe in one click.</p>
+    <!-- Kit form "Taxi Meter" (10243132); confirm redirects to the zip -->
+    <form class="form" action="https://app.kit.com/forms/10243132/subscriptions" method="post" data-endpoint="https://app.kit.com/forms/10243132/subscriptions"
+          data-sent="Check your inbox and click Confirm: Taxi Meter downloads right away." data-sending="Sending" novalidate>
+      <div class="field"><label for="get-email">Email</label>
+        <input id="get-email" name="email_address" type="email" autocomplete="email" required aria-describedby="get-email-err">
+        <p class="field__error" id="get-email-err" hidden>Write an email address with an @, like name@example.com.</p></div>
+      <button class="btn btn--primary" type="submit">Send me Taxi Meter</button>
+      <p class="form__status" data-form-status></p>
+    </form>
+    <p class="gate__fine">One email per new toy, never shared.</p>
+  </div>
+</dialog>
+
+<nav class="actionbar" aria-label="Quick actions">
+  <!-- opens the email gate (#gate) -->
+  <a class="btn btn--primary" href="#gate">Get Taxi Meter</a>
+</nav>
+
+<script type="module" src="assets/system.js"></script>
+<script type="module" src="assets/motion/motion.js"></script>
+<script type="module" src="assets/layout/layout.js"></script>
+<script type="module">
+  // The app's own motion, from TaxiMeter.swift. Every picture above is already its finished state, so
+  // without script and under reduced motion the page stands as written.
+  import { pausable } from './assets/ui/ui.js';
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* the plan picker: the month's API fare (receipt-statement.png, $1,213.19) over the plan's price, as the app's planCard */
+  const MONTH = 1213.19, pv = document.querySelector('[data-pv]');
+  document.querySelectorAll('[data-plan]').forEach(btn => btn.addEventListener('click', () => {
+    const plan = +btn.dataset.plan;
+    document.querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed', String(b === btn)));
+    pv.querySelector('[data-pv-k]').textContent = plan ? `YOUR $${plan}.00/MO PLAN RODE` : 'PLAN VALUE';
+    pv.querySelector('[data-pv-on]').hidden = !plan;
+    pv.querySelector('[data-pv-x]').textContent = plan ? `${(MONTH / plan).toFixed(1)}X ITS PRICE` : 'ON A PRO OR MAX PLAN? PICK IT TO SEE WHAT IT IS WORTH';
+    if (!still) { pv.classList.remove('is-swap'); void pv.offsetWidth; pv.classList.add('is-swap'); }
+  }));
+
+  /* the receipt printer: the next receipt each cycle (trip, day, month statement) */
+  const rp = document.querySelector('.rp');
+  if (rp) {
+    const nw = rp.querySelector('.rp__new'), old = rp.querySelector('.rp__old');
+    const seq = [nw.innerHTML, rp.querySelector('template[data-rc]').innerHTML, old.innerHTML];
+    let k = 0;
+    // each receipt is zoomed to fit the pane under the slot (and clear of the keys), so none is cut
+    const feed = rp.querySelector('.rp__feed'), keys = rp.querySelector('.rp__keys');
+    const fit = () => {
+      const keysW = keys && keys.offsetWidth ? 2 * (keys.offsetWidth + 40) : 32;
+      [nw, old].forEach(d => {
+        const rc = d.querySelector('.rc'); if (!rc) return;
+        rc.style.setProperty('--z', '1');
+        const z = Math.min(1.3, (feed.clientHeight - 20) / rc.offsetHeight, (feed.clientWidth - keysW) / rc.offsetWidth);
+        rc.style.setProperty('--z', Math.max(.55, z).toFixed(3));
+      });
+    };
+    fit(); addEventListener('resize', fit); document.fonts && document.fonts.ready.then(fit);
+    nw.addEventListener('animationiteration', e => { if (e.animationName !== 'rp-feed') return; old.innerHTML = nw.innerHTML; k = (k + 1) % seq.length; nw.innerHTML = seq[k]; fit(); });
+  }
+
+  /* the hero's meter replays a real trip (panel-meter.png): For hire, then Hired, the fare rolling to $29.26 */
+  const box = document.querySelector('.hero__art'), meter = box && box.querySelector('[data-meter]');
+  if (meter && !still) {
+    const FARE = 29.26, TOK = 50751923, CYCLE = 12000, HIRE = 1700, RUN0 = 1900, RUN = 6000;
+    const q = s => box.querySelector(s);
+    const lamps = { hire: q('[data-lamp="hire"]'), hired: q('[data-lamp="hired"]') };
+    const flag = q('[data-flag]'), car = q('[data-car]'), mbar = q('[data-mbar]'), rate = q('[data-rate]'), tok = q('[data-tok]');
+    const ledBox = q('[data-led-box]'), tape = q('[data-tape]'), bars = [...tape.children];
+    const lit = bars.map((b, i) => (b.classList.contains('z') ? -1 : i));
+    // each digit becomes a drum: the lit glyph and the next one under it
+    const drums = [...q('[data-led]').querySelectorAll('.dg')].map(dg => {
+      const a = dg.querySelector('svg:not(.gh)'), b = a.cloneNode(true), d = document.createElement('span');
+      d.className = 'drum'; d.append(a, b); dg.append(d);
+      return { d, a: a.firstElementChild, b: b.firstElementChild, ka: '', kb: '', y: '' };
+    });
+    const put = (r, ka, kb, f) => {
+      if (r.ka !== ka) { r.a.setAttribute('href', '#d' + ka); r.ka = ka; }
+      if (r.kb !== kb) { r.b.setAttribute('href', '#d' + kb); r.kb = kb; }
+      const y = `translateY(${(-f * 100).toFixed(2)}%)`;
+      if (r.y !== y) { r.d.style.transform = y; r.y = y; }
+    };
+    // an odometer: the cents digit turns all the time, each digit above turns while the one below passes 9
+    const led = v => {
+      const x = v * 100, n = drums.length;
+      drums.forEach((r, j) => {
+        const i = n - 1 - j, p = 10 ** i, whole = Math.floor(x / p), cur = whole % 10;
+        const f = i === 0 ? x - Math.floor(x) : Math.max(0, (x - whole * p) - (p - 1));
+        put(r, i > 2 && whole === 0 ? 'x' : cur, (cur + 1) % 10, f);
+      });
+    };
+    const money = v => '$' + v.toFixed(2);
+    const short = t => (t < 1e3 ? String(Math.round(t)) : t < 1e6 ? Math.round(t / 1e3) + 'K' : t < 1e7 ? (t / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : Math.round(t / 1e6) + 'M');
+    const flick = el => { el.classList.remove('is-flick'); void el.offsetWidth; el.classList.add('is-flick'); };
+    let hired = true, shown = -1, dim = false, run = false;
+    const setHired = h => {
+      if (h === hired) return;
+      hired = h;
+      lamps.hire.classList.toggle('on', !h); lamps.hired.classList.toggle('on', h);
+      flick(h ? lamps.hired : lamps.hire);
+      flag.classList.toggle('is-down', h); car.classList.toggle('is-full', h);
+    };
+    const frame = t => {      // t: ms into the cycle
+      setHired(t >= HIRE);
+      const fading = t < 300;
+      if (fading !== dim) { ledBox.classList.toggle('is-dim', fading); dim = fading; }
+      const going = !fading;
+      if (going !== run) { tape.classList.toggle('is-run', going); run = going; }
+      const e = t < RUN0 ? 0 : Math.min(1, (t - RUN0) / RUN);
+      const v = fading ? FARE : FARE * e;
+      if (v !== shown) { led(v); mbar.textContent = money(v); tok.textContent = short(fading ? TOK : TOK * e); shown = v; }
+      rate.textContent = t >= HIRE && e < 1 ? '$0.07' : '$0.00';
+      lit.forEach(i => { if (i >= 0) bars[i].classList.toggle('is-in', fading || e >= (i + 1) / bars.length); });
+    };
+    // it rests on the finished meter first, then plays; the pause button holds the frame
+    let paused = false, clock = -2400, last = performance.now();
+    pausable(box, { pause: () => { paused = true; }, resume: () => { paused = false; last = performance.now(); } });
+    const tick = now => {
+      if (!paused && !document.hidden) clock += Math.min(100, now - last);
+      last = now;
+      if (clock >= 0) frame(clock % CYCLE);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+</script>
+
+<script>
+  // tip button: coin drops, fare rolls $0.00 -> $5.00, heart lights. Rests at once under reduced motion.
+  (() => {
+    const tip = document.querySelector('.tip'); if (!tip) return;
+    const fare = tip.querySelector('.tip__fare b'), still = matchMedia('(prefers-reduced-motion: reduce)');
+    let raf = 0;
+    const run = () => {
+      cancelAnimationFrame(raf);
+      if (still.matches) { fare.textContent = '5.00'; tip.classList.add('is-paid'); return; }
+      tip.classList.remove('is-run', 'is-paid'); void tip.offsetWidth; tip.classList.add('is-run');
+      const t0 = performance.now() + 450;
+      const step = t => {
+        const k = Math.min(1, Math.max(0, (t - t0) / 700));
+        fare.textContent = (5 * (1 - (1 - k) ** 3)).toFixed(2);
+        if (k < 1) raf = requestAnimationFrame(step); else tip.classList.add('is-paid');
+      };
+      raf = requestAnimationFrame(step);
+    };
+    const reset = () => { cancelAnimationFrame(raf); tip.classList.remove('is-run', 'is-paid'); fare.textContent = '0.00'; };
+    tip.addEventListener('pointerenter', run); tip.addEventListener('focus', run); tip.addEventListener('touchstart', run, { passive: true });
+    tip.addEventListener('pointerleave', reset); tip.addEventListener('blur', reset);
+  })();
+</script>
+
+<script>
+  // email gate: links to #get open the dialog (focus inside, Esc closes); without script the :target rule shows it
+  (() => {
+    const gate = document.getElementById('gate'); if (!gate || !gate.showModal) return;
+    const open = e => { e && e.preventDefault(); if (!gate.open) gate.showModal(); gate.querySelector('input[type="email"]').focus(); };
+    document.addEventListener('click', e => { const a = e.target.closest('a[href="#gate"]'); if (a) open(e); });
+    gate.querySelector('.gate__x').addEventListener('click', e => { e.preventDefault(); gate.close(); if (location.hash === '#gate') history.replaceState(null, '', location.pathname + location.search); });
+    gate.addEventListener('click', e => { if (e.target === gate) gate.close(); });
+    if (location.hash === '#gate') open();
+  })();
+</script>
+</body>
+</html>
